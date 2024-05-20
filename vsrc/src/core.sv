@@ -52,8 +52,6 @@ module core
     assign A1_IF_instruction = (MEM_wait | EXE_wait | ~iresp.data_ok) ? 32'b0 : iresp.data;  // 取得指令
 
 
-
-
     wire [1:0] IF_aluOp_2;
     wire IF_regWrite, IF_aluSrc, IF_aluSext, IF_memRead, IF_memWrite;
     wire IF_branch, IF_jump, IF_jumpReg, IF_lui, IF_auipc, IF_excep;
@@ -73,6 +71,7 @@ module core
         .excep   (IF_excep)
     );
 
+
     wire [4:0] IF_aluControl_5;
     ALUControl u_ALUControl (
         .aluOp_2     (IF_aluOp_2),
@@ -81,7 +80,6 @@ module core
         .funct3      (A1_IF_instruction[14:12]),
         .aluControl_5(IF_aluControl_5)
     );
-
 
 
     wire [63:0] IF_readData1_R;  // 数据x[rs1]
@@ -96,10 +94,6 @@ module core
         .readData2_R(IF_readData2_R),
         .regGroup   (regGroup)
     );
-
-
-
-
 
 
     wire [63:0] IF_readData_CSR;  // 数据CSRs[csr]
@@ -134,7 +128,7 @@ module core
     reg EXE_branch, EXE_jump, EXE_jumpReg, EXE_lui, EXE_auipc, EXE_excep;
     reg [ 4:0] EXE_aluControl_5;
     reg [63:0] EXE_readData1_R_old;
-    reg [63:0] EXE_readData2_R_old;
+    reg [63:0] EXE_readData2_R;
     reg [63:0] EXE_readData_CSR;
     reg [63:0] EXE_imm;
     always @(posedge clk) begin
@@ -154,7 +148,7 @@ module core
             EXE_excep           <= 1'b0;
             EXE_aluControl_5    <= 5'b0;
             EXE_readData1_R_old <= 64'b0;
-            EXE_readData2_R_old <= 64'b0;
+            EXE_readData2_R     <= 64'b0;
             EXE_readData_CSR    <= 64'b0;
             EXE_imm             <= 64'b0;
         end else if (~(MEM_wait | EXE_wait)) begin
@@ -173,7 +167,7 @@ module core
             EXE_excep           <= IF_excep;
             EXE_aluControl_5    <= IF_aluControl_5;
             EXE_readData1_R_old <= IF_readData1_R;
-            EXE_readData2_R_old <= IF_readData2_R;
+            EXE_readData2_R     <= IF_readData2_R;
             EXE_readData_CSR    <= IF_readData_CSR;
             EXE_imm             <= IF_imm;
         end
@@ -182,15 +176,13 @@ module core
     // --------------------------------------------------
 
 
-    wire alu_ok;
-    wire EXE_wait;
-    reg  EXE_wait_;
-    assign EXE_wait = EXE_wait_ & ~alu_ok;  // 异步拉低
+    reg  EXE_run;
+    wire EXE_wait;  // 等待EXE阶段完成
+    assign EXE_wait = EXE_run & ~alu_ok;  // 异步拉低
     always @(posedge clk) begin
-        if (reset) EXE_wait_ <= 1'b0;  // 初始化信号
-        else if (IF_aluControl_5[4] == 1'b1) EXE_wait_ <= 1'b1;  // EXE阶段开始
-        else if (alu_ok) EXE_wait_ <= 1'b0;  // EXE阶段结束
-        else EXE_wait_ <= EXE_wait_;  // 信号保持
+        if (reset) EXE_run <= 1'b0;  // 初始化信号
+        else if (IF_aluControl_5[4] == 1'b1) EXE_run <= 1'b1;  // EXE阶段开始
+        else if (alu_ok) EXE_run <= 1'b0;  // EXE阶段结束
     end
 
 
@@ -205,7 +197,7 @@ module core
     assign WB_rd   = A4_WB_instruction[11:7];
 
     reg [63:0] aluA;
-    always @(*) begin
+    always @(*) begin  // 处理WB-EXE数据冒险
         if (EXE_lui == 1'b1) aluA = 64'b0;  // lui [rd=0+imm]
         else if (EXE_auipc == 1'b1) aluA = EXE_PCaddress;  // auipc [rd=PC+imm]
         else begin  // rs1
@@ -219,10 +211,10 @@ module core
     end
 
     reg [63:0] aluB;
-    always @(*) begin
+    always @(*) begin  // 处理WB-EXE数据冒险
         if (EXE_aluSrc == 1'b1) aluB = EXE_imm;  // imm
         else begin  // rs2
-            aluB = EXE_readData2_R_old;
+            aluB = EXE_readData2_R;
             if (WB_regWrite & (EXE_rs2 != 5'b0) & (EXE_rs2 == WB_rd)) aluB = WB_writeData_R;
             if (MEM_regWrite & (EXE_rs2 != 5'b0) & (EXE_rs2 == MEM_rd))
                 if (~MEM_memRead)  // 非load指令
@@ -231,9 +223,9 @@ module core
         end
     end
 
-
-    wire [63:0] EXE_aluResult;
+    wire alu_ok;
     wire zero, s_less, u_less;
+    wire [63:0] EXE_aluResult;
     ALU u_ALU (
         .clk         (clk),
         .reset       (reset),
@@ -258,13 +250,6 @@ module core
         .cnd   (EXE_cnd)
     );
 
-
-    // 消除WB-MEM数据冒险
-    reg [63:0] EXE_readData2_R;
-    always @(*) begin
-        if (EXE_memWrite & WB_regWrite & (A4_WB_instruction[11:7] == A2_EXE_instruction[24:20]) & (A4_WB_instruction[11:7] != 5'b0)) EXE_readData2_R = WB_writeData_R;
-        else EXE_readData2_R = EXE_readData2_R_old;
-    end
 
 
     // EXE_MEM
@@ -306,20 +291,19 @@ module core
 
 
     reg  MEM_run;
-    wire MEM_wait;
-    assign MEM_wait = MEM_run & ~dresp.data_ok;
+    wire MEM_wait;  // 等待MEM阶段完成
+    assign MEM_wait = MEM_run & ~dresp.data_ok;  // 异步拉低
     always @(posedge clk) begin
         if (reset) MEM_run <= 1'b0;
         else if (EXE_memRead | EXE_memWrite) MEM_run <= 1'b1;  // MEM阶段开始
         else if (dresp.data_ok) MEM_run <= 1'b0;  // MEM阶段结束
-        else MEM_run <= MEM_run;  // 信号保持
     end
 
 
-    // 消除WB-MEM数据冒险
+    // 处理WB-MEM数据冒险
     reg [63:0] writeData_M;
     always @(*) begin
-        if (MEM_memWrite & WB_regWrite & (A4_WB_instruction[11:7] == A3_MEM_instruction[24:20]) & (A4_WB_instruction[11:7] != 5'b0)) writeData_M = WB_writeData_R;
+        if (MEM_memWrite && WB_regWrite && A4_WB_instruction[11:7] == A3_MEM_instruction[24:20] && A4_WB_instruction[11:7] != 5'b0) writeData_M = WB_writeData_R;
         else writeData_M = MEM_readData2_R;
     end
 
@@ -342,6 +326,7 @@ module core
 
 
 
+
     // 计算需要写回的数据
     wire [63:0] MEM_writeData_R;
     RegWrite u_RegWrite (
@@ -356,21 +341,22 @@ module core
         .writeData_R (MEM_writeData_R)
     );
 
-    // 时序逻辑执行写回操作
-    always @(posedge clk) begin
+    wire MEM_rd;
+    assign MEM_rd = A3_MEM_instruction[11:7];
+    always @(posedge clk) begin  // 在WB阶段的上升沿触发
         if (reset) for (integer i = 0; i < 32; i = i + 1) u_Regs.Register[i] = 64'b0;
-        else if (MEM_regWrite && A3_MEM_instruction[11:7] != 5'b00000 && ~(MEM_wait | EXE_wait)) begin  // x0寄存器不可写
-            u_Regs.Register[A3_MEM_instruction[11:7]] = MEM_writeData_R;
+        else if (MEM_regWrite && MEM_rd != 5'b00000 && ~(MEM_wait | EXE_wait)) begin  // x0寄存器不可写
+            u_Regs.Register[MEM_rd] = MEM_writeData_R;
         end else u_Regs.Register[0] = 64'h0;
     end
 
 
     // MEM_WB
     reg [63:0] WB_PCaddress;
-    reg [31:0] A4_WB_instruction;
-    reg WB_regWrite, WB_memRead;
     reg [63:0] WB_aluResult;
     reg [63:0] WB_writeData_R;
+    reg [31:0] A4_WB_instruction;
+    reg WB_regWrite, WB_memRead;
     always @(posedge clk) begin
         if (reset) begin
             WB_PCaddress      <= 64'b0;
@@ -393,22 +379,23 @@ module core
 
 
 
-
-
+    wire commit_valid, commit_skip;
+    assign commit_valid = (|A4_WB_instruction) & ~(MEM_wait | EXE_wait);
+    assign commit_skip  = WB_memRead & (WB_aluResult[31] == 1'b0);
 `ifdef VERILATOR
     DifftestInstrCommit DifftestInstrCommit (
         .clock   (clk),
         .coreid  (0),
         .index   (0),
-        .valid   ((|A4_WB_instruction) & ~(MEM_wait | EXE_wait)),
+        .valid   (commit_valid),
         .pc      (WB_PCaddress),
         .instr   (A4_WB_instruction),
-        .skip    (WB_memRead & (WB_aluResult[31] == 1'b0)),
+        .skip    (commit_skip),
         .isRVC   (0),
         .scFailed(0),
-        .wen     (WB_regWrite),                                    // 这条指令是否写入寄存器
-        .wdest   ({3'b0, A4_WB_instruction[11:7]}),                // 写入哪个通用寄存器
-        .wdata   (WB_writeData_R)                                  // 写入的数据
+        .wen     (WB_regWrite),                      // 这条指令是否写入寄存器
+        .wdest   ({3'b0, A4_WB_instruction[11:7]}),  // 写入哪个通用寄存器
+        .wdata   (WB_writeData_R)                    // 写入的数据
     );
 
     DifftestArchIntRegState DifftestArchIntRegState (
