@@ -1,4 +1,3 @@
 **/build/
 difftest/*
-!difftest/LICENSE
 docs/*
