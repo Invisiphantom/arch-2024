@@ -4744,8 +4744,11 @@ Disassembly of section .data:
     4a00:	003181b3          	add	gp,gp,gp
     4a04:	f8d18083          	lb	ra,-115(gp) # 0x40007f8d
     4a08:	c6c0b0b7          	lui	ra,0xc6c0b
+
     4a0c:	0262033b          	mulw	t1,tp,t1
+
     4a10:	0231f13b          	remuw	sp,gp,gp
+    
     4a14:	0230d13b          	divuw	sp,ra,gp
     4a18:	003091bb          	sllw	gp,ra,gp
     4a1c:	02208233          	mul	tp,ra,sp
