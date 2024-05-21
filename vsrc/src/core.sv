@@ -281,7 +281,9 @@ module core
             MEM_jump <= EXE_jump;
             MEM_jumpReg <= EXE_jumpReg;
             MEM_excep <= EXE_excep;
-            MEM_readData2_R <= EXE_readData2_R;
+            // 处理WB-MEM数据冒险
+            if (EXE_memWrite && WB_regWrite && A4_WB_instruction[11:7] == A2_EXE_instruction[24:20] && A4_WB_instruction[11:7] != 5'b0) MEM_readData2_R <= WB_writeData_R;
+            else MEM_readData2_R <= EXE_readData2_R;
             MEM_readData_CSR <= EXE_readData_CSR;
             MEM_aluResult <= EXE_aluResult;
         end
@@ -379,10 +381,12 @@ module core
 
 
 
+`ifdef VERILATOR
+
+
     wire commit_valid, commit_skip;
     assign commit_valid = (|A4_WB_instruction) & ~(MEM_wait | EXE_wait);
     assign commit_skip  = WB_memRead & (WB_aluResult[31] == 1'b0);
-`ifdef VERILATOR
     DifftestInstrCommit DifftestInstrCommit (
         .clock   (clk),
         .coreid  (0),
