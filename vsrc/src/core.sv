@@ -162,8 +162,8 @@ module core
     wire [ 4:0] IF_writeCSR_zimm;
     assign IF_writeCSR_zimm = A1_IF_instruction[19:15];
     always @(posedge clk) begin
-        if (reset) begin  // 复位赋值mode为3
-            u_Regs_CSR.mode = 2'b11;
+        if (reset) begin
+            u_Regs_CSR.mode = M_Mode;
             u_Regs_CSR.mstatus = 64'b0;
             u_Regs_CSR.mie = 64'b0;
             u_Regs_CSR.mtvec = 64'b0;
@@ -172,6 +172,7 @@ module core
             u_Regs_CSR.mcause = 64'b0;
             u_Regs_CSR.mtval = 64'b0;
             u_Regs_CSR.mip = 64'b0;
+            u_Regs_CSR.satp = 64'b0;
         end else if (IF_csrrx) begin  // 在EXE阶段的上升沿触发
             case (A1_IF_instruction[14:12])
                 3'b001:  temp = IF_readData1_R;  // csrrw
@@ -183,7 +184,6 @@ module core
                 default: temp = 64'h0;
             endcase
             case (A1_IF_instruction[31:20])
-                12'h180: u_Regs_CSR.satp = temp;
                 12'h300: u_Regs_CSR.mstatus = temp;
                 12'h304: u_Regs_CSR.mie = temp;
                 12'h305: u_Regs_CSR.mtvec = temp;
@@ -192,6 +192,7 @@ module core
                 12'h342: u_Regs_CSR.mcause = temp;
                 12'h343: u_Regs_CSR.mtval = temp;
                 12'h344: u_Regs_CSR.mip = temp;
+                12'h180: u_Regs_CSR.satp = temp;
 
                 12'b0000_0000_0000: begin  // ecall
                     u_Regs_CSR.mepc = A1_IF_PCaddress;

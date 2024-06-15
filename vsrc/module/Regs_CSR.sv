@@ -25,7 +25,6 @@ module Regs_CSR
 
     always @(*) begin  // 读取CSR
         case (rw_CSR)
-            12'h180: readData_CSR = satp;
             12'h300: readData_CSR = mstatus;
             12'h304: readData_CSR = mie;
             12'h305: readData_CSR = mtvec;
@@ -34,6 +33,7 @@ module Regs_CSR
             12'h342: readData_CSR = mcause;
             12'h343: readData_CSR = mtval;
             12'h344: readData_CSR = mip;
+            12'h180: readData_CSR = satp;
 
             12'b0000_0000_0000: readData_CSR = mtvec;
             12'b0011_0000_0010: readData_CSR = mepc;
