@@ -38,6 +38,7 @@ module core
             A1_IF_PCaddress <= PCINIT;
         end else begin
             if (MEM_wait | EXE_wait) A1_IF_PCaddress <= A1_IF_PCaddress;
+            else if (IF_mret) A1_IF_PCaddress <= u_Regs_CSR.mepc;
             else if (IF_jump) A1_IF_PCaddress <= A1_IF_PCaddress + IF_imm;
             else if (IF_jumpReg) A1_IF_PCaddress <= IF_readData1_R + IF_imm;
             else if (EXE_cnd) A1_IF_PCaddress <= EXE_PCaddress + EXE_imm;
@@ -76,6 +77,10 @@ module core
         .csrrx   (IF_csrrx)
     );
 
+    wire IF_ecall, IF_mret;
+    assign IF_ecall = (A1_IF_instruction == 32'b0000_0000_0000_00000_000_00000_1110011);
+    assign IF_mret  = (A1_IF_instruction == 32'b0011_0000_0010_00000_000_00000_1110011);
+
 
     wire [4:0] IF_aluControl_5;
     ALUControl u_ALUControl (
@@ -102,13 +107,11 @@ module core
 
 
     wire [63:0] IF_readData_CSR;  // 数据CSRs[csr]
-    csrs_t csrGroup;  // 外接寄存器组用于commit
     Regs_CSR u_Regs_CSR (
         .clk         (clk),
         .reset       (reset),
         .rw_CSR      (A1_IF_instruction[31:20]),
-        .readData_CSR(IF_readData_CSR),
-        .csrGroup    (csrGroup)
+        .readData_CSR(IF_readData_CSR)
     );
 
 
@@ -380,6 +383,7 @@ module core
             endcase
 
             case (A3_MEM_instruction[31:20])
+                12'h180: u_Regs_CSR.satp = temp;
                 12'h300: u_Regs_CSR.mstatus = temp;
                 12'h304: u_Regs_CSR.mie = temp;
                 12'h305: u_Regs_CSR.mtvec = temp;
@@ -506,21 +510,21 @@ module core
     DifftestCSRState DifftestCSRState (
         .clock         (clk),
         .coreid        (0),
-        .priviledgeMode(csrGroup.mode),
-        .mstatus       (csrGroup.mstatus),
-        .sstatus       (csrGroup.mstatus & 64'h800000030001e000),
-        .mepc          (csrGroup.mepc),
+        .priviledgeMode(u_Regs_CSR.mode),
+        .mstatus       (u_Regs_CSR.mstatus),
+        .sstatus       (u_Regs_CSR.mstatus & 64'h800000030001e000),
+        .mepc          (u_Regs_CSR.mepc),
         .sepc          (0),
-        .mtval         (csrGroup.mtval),
+        .mtval         (u_Regs_CSR.mtval),
         .stval         (0),
-        .mtvec         (csrGroup.mtvec),
+        .mtvec         (u_Regs_CSR.mtvec),
         .stvec         (0),
-        .mcause        (csrGroup.mcause),
+        .mcause        (u_Regs_CSR.mcause),
         .scause        (0),
-        .satp          (0),
-        .mip           (csrGroup.mip),
-        .mie           (csrGroup.mie),
-        .mscratch      (csrGroup.mscratch),
+        .satp          (u_Regs_CSR.satp),
+        .mip           (u_Regs_CSR.mip),
+        .mie           (u_Regs_CSR.mie),
+        .mscratch      (u_Regs_CSR.mscratch),
         .sscratch      (0),
         .mideleg       (0),
         .medeleg       (0)

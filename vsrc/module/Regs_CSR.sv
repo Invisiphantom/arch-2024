@@ -6,14 +6,13 @@
 module Regs_CSR
     import common::*;
 (
-    input             clk,          // 时钟信号
-    input             reset,        // 复位信号
-    input      [11:0] rw_CSR,       // 需要读写的寄存器
-    output reg [63:0] readData_CSR, // 读取得到的数据
-    output csrs_t        csrGroup
+    input                clk,           // 时钟信号
+    input                reset,         // 复位信号
+    input         [11:0] rw_CSR,        // 需要读写的寄存器
+    output reg    [63:0] readData_CSR  // 读取得到的数据
 );
 
-    reg [ 1:0] mode;
+    reg [1:0] mode;
     reg [63:0] mstatus;
     reg [63:0] mie;
     reg [63:0] mtvec;
@@ -22,9 +21,11 @@ module Regs_CSR
     reg [63:0] mcause;
     reg [63:0] mtval;
     reg [63:0] mip;
+    satp_t satp;
 
     always @(*) begin  // 读取CSR
         case (rw_CSR)
+            12'h180: readData_CSR = satp;
             12'h300: readData_CSR = mstatus;
             12'h304: readData_CSR = mie;
             12'h305: readData_CSR = mtvec;
@@ -40,22 +41,4 @@ module Regs_CSR
         endcase
     end
 
-
-
-
-
-
-
-
-
-
-    assign csrGroup.mode = mode;
-    assign csrGroup.mstatus = mstatus;
-    assign csrGroup.mie = mie;
-    assign csrGroup.mtvec = mtvec;
-    assign csrGroup.mscratch = mscratch;
-    assign csrGroup.mepc = mepc;
-    assign csrGroup.mcause = mcause;
-    assign csrGroup.mtval = mtval;
-    assign csrGroup.mip = mip;
 endmodule

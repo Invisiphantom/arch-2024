@@ -275,17 +275,6 @@ package common;
         u64 t6;
     } regs_t;
 
-    typedef struct packed {
-        u2  mode;
-        u64 mstatus;
-        u64 mie;
-        u64 mtvec;
-        u64 mscratch;
-        u64 mepc;
-        u64 mcause;
-        u64 mtval;
-        u64 mip;
-    } csrs_t;
 
 
     typedef struct packed {
