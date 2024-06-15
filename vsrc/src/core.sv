@@ -43,6 +43,7 @@ module core
         end else begin
             if (MEM_wait | EXE_wait) A1_IF_PCaddress <= A1_IF_PCaddress;
             else if (IF_mret) A1_IF_PCaddress <= u_Regs_CSR.mepc;
+            else if (IF_ecall) A1_IF_PCaddress <= u_Regs_CSR.mtvec;
             else if (IF_jump) A1_IF_PCaddress <= A1_IF_PCaddress + IF_imm;
             else if (IF_jumpReg) A1_IF_PCaddress <= IF_readData1_R + IF_imm;
             else if (EXE_cnd) A1_IF_PCaddress <= EXE_PCaddress + EXE_imm;
@@ -52,9 +53,9 @@ module core
         end
     end
 
-    // assign ireq.valid = 1'b1;
-    // assign ireq.addr  = A1_IF_PCaddress;  // TODO
 
+    wire [63:0] A1_IF_PCaddress_;
+    assign A1_IF_PCaddress_ = ireq.addr;
 
 
     reg  IF_PC_mmu_run;
@@ -74,29 +75,22 @@ module core
         .dresp   (dresp)
     );
 
-    reg [63:0] IF_temp_PCaddress;
+
+
     always @(posedge clk) begin
         if (reset) begin
-            IF_temp_PCaddress = 64'b0;
             IF_PC_mmu_run = 1'b0;
             ireq.valid = 1'b1;
         end else begin
             if (iresp.data_ok) begin  // PC地址发送改变
                 ireq.valid = 1'b0;  // 关闭ibus
                 IF_PC_mmu_run = 1'b1;  // 开始地址转换
-                IF_temp_PCaddress = A1_IF_PCaddress;
             end else if (IF_PC_mmu_ok == 1'b1) begin
                 ireq.valid = 1'b1;  // 开启ibus
                 IF_PC_mmu_run = 1'b0;  // 结束地址转换
             end
         end
     end
-
-
-
-
-
-
 
 
 
@@ -208,7 +202,13 @@ module core
                 12'h344: u_Regs_CSR.mip = temp;
 
                 12'b0000_0000_0000: begin  // ecall
-
+                    u_Regs_CSR.mepc = A1_IF_PCaddress;
+                    u_Regs_CSR.mcause[63] = 1'b0;
+                    u_Regs_CSR.mcause[3:0] = 4'b1000;
+                    u_Regs_CSR.mstatus.mpie = u_Regs_CSR.mstatus.mie;
+                    u_Regs_CSR.mstatus.mie = 1'b0;
+                    u_Regs_CSR.mstatus.mpp = u_Regs_CSR.mode;
+                    u_Regs_CSR.mode = M_Mode;
                 end
                 12'b0011_0000_0010: begin  // mret
                     u_Regs_CSR.mstatus.mie = u_Regs_CSR.mstatus.mpie;
