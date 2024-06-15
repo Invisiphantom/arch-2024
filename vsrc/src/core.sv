@@ -41,6 +41,8 @@ module core
             else if (IF_jump) A1_IF_PCaddress <= A1_IF_PCaddress + IF_imm;
             else if (IF_jumpReg) A1_IF_PCaddress <= IF_readData1_R + IF_imm;
             else if (EXE_cnd) A1_IF_PCaddress <= EXE_PCaddress + EXE_imm;
+            // 关闭流水线并行
+            else if ((|A2_EXE_instruction) | (|A3_MEM_instruction) | (|A4_WB_instruction)) A1_IF_PCaddress <= A1_IF_PCaddress;
             else if (iresp.data_ok) A1_IF_PCaddress <= A1_IF_PCaddress + 4;
         end
     end
@@ -49,7 +51,10 @@ module core
     assign ireq.addr  = A1_IF_PCaddress;
 
     wire [31:0] A1_IF_instruction;
-    assign A1_IF_instruction = (MEM_wait | EXE_wait | ~iresp.data_ok) ? 32'b0 : iresp.data;  // 取得指令
+    // assign A1_IF_instruction = (MEM_wait | EXE_wait | ~iresp.data_ok) ? 32'b0 : iresp.data;  // 取得指令
+    assign A1_IF_instruction = (MEM_wait | EXE_wait | ~iresp.data_ok | (|A2_EXE_instruction) | (|A3_MEM_instruction) | (|A4_WB_instruction)) ? 32'b0 : iresp.data;  // 关闭流水线并行
+
+
 
 
     wire [1:0] IF_aluOp_2;

@@ -221,8 +221,11 @@ Disassembly of section .data:
      354:	402080b3          	sub	ra,ra,sp
      358:	0010563b          	srlw	a2,zero,ra
      35c:	0211423b          	divw	tp,sp,ra
+
      360:	2c51fa63          	bgeu	gp,t0,0x634
+
      364:	2c51e863          	bltu	gp,t0,0x634
+
      368:	0034a0b3          	slt	ra,s1,gp
      36c:	6ec64097          	auipc	ra,0x6ec64
      370:	0181919b          	slliw	gp,gp,0x18
@@ -402,7 +405,9 @@ Disassembly of section .data:
      628:	002090b3          	sll	ra,ra,sp
      62c:	7a120e63          	beq	tp,ra,0xde8
      630:	7b8003ef          	jal	t2,0xde8
+
      634:	58bb3397          	auipc	t2,0x58bb3
+     
      638:	b3200117          	auipc	sp,0xb3200
      63c:	001da0b3          	slt	ra,s11,ra
      640:	4020d133          	sra	sp,ra,sp
