@@ -47,7 +47,6 @@ module core
             else if (IF_jump) A1_IF_PCaddress <= A1_IF_PCaddress + IF_imm;
             else if (IF_jumpReg) A1_IF_PCaddress <= IF_readData1_R + IF_imm;
             else if (EXE_cnd) A1_IF_PCaddress <= EXE_PCaddress + EXE_imm;
-            // 取消流水线并行
             else if (pipeline_busy) A1_IF_PCaddress <= A1_IF_PCaddress;
             else if (iresp.data_ok) A1_IF_PCaddress <= A1_IF_PCaddress + 4;
         end
