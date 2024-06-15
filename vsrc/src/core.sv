@@ -11,7 +11,6 @@
 `include "module/ALU.sv"
 `include "module/BranchJudge.sv"
 `include "module/DataMem.sv"
-`include "module/DataMMU.sv"
 `include "module/RegWrite.sv"
 `endif
 
@@ -58,18 +57,7 @@ module core
     wire IF_PC_mmu_wait;
     wire IF_PC_mmu_ok;
     assign IF_PC_mmu_wait = IF_PC_mmu_run & ~IF_PC_mmu_ok;  // 异步拉低
-    DataMMU u_PC_DataMMU (
-        .clk     (clk),
-        .reset   (reset),
-        .mode    (u_Regs_CSR.mode),
-        .virAddr (A1_IF_PCaddress),
-        .satp    (u_Regs_CSR.satp),
-        .mmu_wait(IF_PC_mmu_wait),
-        .mmu_ok  (IF_PC_mmu_ok),
-        .phyAddr (ireq.addr),
-        .dreq    (dreq),
-        .dresp   (dresp)
-    );
+
 
 
 
@@ -412,15 +400,23 @@ module core
 
     wire [63:0] MEM_readData_M;
     DataMem u_DataMem (
-        .clk        (clk),
+        .clk  (clk),
+        .reset(reset),
         .memRead    (MEM_memRead),
         .memWrite   (MEM_memWrite),
         .funct3     (A3_MEM_instruction[14:12]),
         .memAddr    (MEM_aluResult),
         .writeData_M(writeData_M),
         .readData_M (MEM_readData_M),
-        .dreq       (dreq),
-        .dresp      (dresp)
+        // MMU虚拟地址转换
+        .mmu_wait(IF_PC_mmu_wait),
+        .virAddr (A1_IF_PCaddress),
+        .mode    (u_Regs_CSR.mode),
+        .satp    (u_Regs_CSR.satp),
+        .mmu_ok  (IF_PC_mmu_ok),
+        .phyAddr (ireq.addr),
+        .dreq (dreq),
+        .dresp(dresp)
     );
 
 
