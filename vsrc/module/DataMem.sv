@@ -10,14 +10,27 @@ module DataMem
     input                     memRead,      // 是否需要读内存
     input                     memWrite,     // 是否需要写内存
     input              [ 2:0] funct3,       // 0__:sign 1__:unsign  (b:00 h:01 w:10 d:11)
-    input              [63:0] memAddr,      // 内存地址
+    input              [63:0] memAddr,      // 虚拟内存地址
     input              [63:0] writeData_M,  // 写入的数据
     output reg         [63:0] readData_M,   // 读得的数据
     output dbus_req_t         dreq,         // dBUS请求
     input  dbus_resp_t        dresp         // dBUS响应
 );
 
-    // TIME-MODIFY
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     always @(*) begin
         case (funct3)  // 获取数据
             3'b000: begin  // lb

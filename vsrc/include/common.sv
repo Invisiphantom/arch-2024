@@ -288,9 +288,26 @@ package common;
     } csrs_t;
 
 
+    typedef struct packed {
+        u4  mode;  // [63:60]
+        u16 asid;  // [59:44]
+        u44 ppn;   //  [43:0]
+    } satp_t;
 
+    typedef struct packed {
+        u10 reserved;  // [63:54]
+        u44 ppn;       // [53:10]
+        u2  RSW;       // [9:8]
+        u1  D;         // [7]
+        u1  A;         // [6]
+        u1  G;         // [5]
+        u1  U;         // [4]
+        u1  X;         // [3]
+        u1  W;         // [2]
+        u1  R;         // [1]
+        u1  V;         // [0]
+    } Sv39_entry_t;
 
-    
 
 endpackage
 `endif

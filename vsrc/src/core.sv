@@ -330,8 +330,6 @@ module core
 
 
 
-
-
     // 计算需要写回的数据
     wire [63:0] MEM_writeData_R;
     RegWrite u_RegWrite (

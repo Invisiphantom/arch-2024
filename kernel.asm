@@ -475,7 +475,11 @@ kfree(void *pa)
 
     if(((uint64_t)pa % PGSIZE) != 0 || (char*)pa < end || (uint64_t)pa >= PHYSTOP)
         panic("kfree");
+
+
     800004a0:	00002a17          	auipc	s4,0x2
+
+    
     800004a4:	bf0a0a13          	addi	s4,s4,-1040 # 80002090 <digits+0x80>
     800004a8:	000a0513          	mv	a0,s4
     if(((uint64_t)pa % PGSIZE) != 0 || (char*)pa < end || (uint64_t)pa >= PHYSTOP)
@@ -494,8 +498,10 @@ kfree(void *pa)
     800004cc:	204080e7          	jalr	516(ra) # 800006cc <memset>
 
     r = (struct run*)pa;
-
     r->next = freelist;
+
+
+
     800004d0:	00093783          	ld	a5,0(s2)
     800004d4:	00f4b023          	sd	a5,0(s1)
     for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE)
