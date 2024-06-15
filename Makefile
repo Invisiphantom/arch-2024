@@ -10,8 +10,8 @@ init:
 	git submodule update --init --recursive
 
 handin:
-	@if [ ! -f docs/report.pdf docs/verilator.png docs/vivado.png ]; then \
-		echo "Please write your report and pictures in the 'docs' folder and convert it to 'report.pdf verilator.png vivado.png' first"; \
+	@if [ ! -f docs/report.pdf ]; then \
+		echo "Please write your report in the 'docs' folder and convert it to 'report.pdf' first"; \
 		exit 1; \
 	fi; \
 	echo "Please enter your 'student id-name' (e.g., 12345678910-someone)"; \
@@ -19,7 +19,7 @@ handin:
 	echo "Please enter lab number (e.g., 1)"; \
 	read lab_n; \
 	zip -q -r "docs/$$filename-lab$$lab_n.zip" \
-	  include vsrc docs/report.pdf docs/verilator.png docs/vivado.png
+	  include vsrc docs/report.pdf
 
 sim-verilog:
 	@echo "I don't know why, just make difftest happy..."
@@ -55,6 +55,9 @@ test-labnorm: sim
 
 all-test-rv64im: sim
 	TEST=$(TEST) ./build/emu --diff $(NEMU_HOME)/riscv64-nemu-interpreter-so -i ./ready-to-run/all-test-rv64im/all-test-rv64im.bin $(VOPT) || true
+
+test-os: sim
+	TEST=$(TEST) ./build/emu --diff $(NEMU_HOME)/riscv64-nemu-interpreter-so -i ./ready-to-run/test-os/kernel $(VOPT) || true
 
 clean:
 	rm -rf build

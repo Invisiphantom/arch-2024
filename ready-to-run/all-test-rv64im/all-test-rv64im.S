@@ -4744,11 +4744,8 @@ Disassembly of section .data:
     4a00:	003181b3          	add	gp,gp,gp
     4a04:	f8d18083          	lb	ra,-115(gp) # 0x40007f8d
     4a08:	c6c0b0b7          	lui	ra,0xc6c0b
-
     4a0c:	0262033b          	mulw	t1,tp,t1
-
     4a10:	0231f13b          	remuw	sp,gp,gp
-    
     4a14:	0230d13b          	divuw	sp,ra,gp
     4a18:	003091bb          	sllw	gp,ra,gp
     4a1c:	02208233          	mul	tp,ra,sp
@@ -17570,9 +17567,7 @@ Disassembly of section .data:
    11288:	02071713          	slli	a4,a4,0x20
    1128c:	01e75713          	srli	a4,a4,0x1e
    11290:	00e58733          	add	a4,a1,a4
-
    11294:	00072703          	lw	a4,0(a4)
-
    11298:	03051793          	slli	a5,a0,0x30
    1129c:	0307d793          	srli	a5,a5,0x30
    112a0:	00e888bb          	addw	a7,a7,a4
@@ -17607,10 +17602,8 @@ Disassembly of section .data:
    11314:	00079783          	lh	a5,0(a5)
    11318:	00658333          	add	t1,a1,t1
    1131c:	0017071b          	addiw	a4,a4,1
-   
    11320:	02d787bb          	mulw	a5,a5,a3
    11324:	00f32023          	sw	a5,0(t1)
-
    11328:	fca71ae3          	bne	a4,a0,0x112fc
    1132c:	0018081b          	addiw	a6,a6,1
    11330:	011508bb          	addw	a7,a0,a7
@@ -21194,11 +21187,7 @@ Disassembly of section .data:
    14b18:	01c50513          	addi	a0,a0,28 # 0x19b30
    14b1c:	20d010ef          	jal	ra,0x16528
    14b20:	233337b7          	lui	a5,0x23333
-
-
    14b24:	0087a783          	lw	a5,8(a5) # 0x23333008
-
-
    14b28:	0007841b          	sext.w	s0,a5
    14b2c:	0017f793          	andi	a5,a5,1
    14b30:	02078263          	beqz	a5,0x14b54
