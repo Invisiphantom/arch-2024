@@ -8,7 +8,9 @@ Disassembly of section .data:
        0:	00000093          	li	ra,0
        4:	00000113          	li	sp,0
        8:	00000193          	li	gp,0
+
        c:	023161bb          	remw	gp,sp,gp
+       
       10:	400082b7          	lui	t0,0x40008
       14:	005282b3          	add	t0,t0,t0
       18:	f832b423          	sd	gp,-120(t0) # 0x40007f88
