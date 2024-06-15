@@ -429,7 +429,9 @@ Disassembly of section .data:
      694:	6fb1019b          	addiw	gp,sp,1787
      698:	00018193          	mv	gp,gp
      69c:	10318a63          	beq	gp,gp,0x7b0
+
      6a0:	00113133          	sltu	sp,sp,ra
+
      6a4:	40008137          	lui	sp,0x40008
      6a8:	00210133          	add	sp,sp,sp
      6ac:	f8013103          	ld	sp,-128(sp) # 0x40007f80
@@ -675,7 +677,11 @@ Disassembly of section .data:
      a6c:	49f3011b          	addiw	sp,t1,1183
      a70:	00318133          	add	sp,gp,gp
      a74:	c22116e3          	bne	sp,sp,0x6a0
+
+
      a78:	c22104e3          	beq	sp,sp,0x6a0
+
+     
      a7c:	400080b7          	lui	ra,0x40008
      a80:	001080b3          	add	ra,ra,ra
      a84:	f800b103          	ld	sp,-128(ra) # 0x40007f80

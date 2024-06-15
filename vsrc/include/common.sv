@@ -18,6 +18,7 @@ package common;
     typedef logic [63:0] u64;
     typedef logic [43:0] u44;
     typedef logic [31:0] u32;
+    typedef logic [26:0] u27;
     typedef logic [19:0] u20;
     typedef logic [15:0] u16;
     typedef logic [14:0] u15;
@@ -276,27 +277,59 @@ package common;
     } regs_t;
 
 
+    typedef struct packed {
+        u1 sd;  // [63]
+        u27 xx;  // [62:36]
+        u2 sxl;  // [35:34]
+        u2 uxl;  // [33:32]
+        u9 xxx;  // [31:23]
+        u1 tsr;  // [22]
+        u1 tw;  // [21]
+        u1 tvm;  // [20]
+        u1 mxr;  // [19]
+        u1 sum;  // [18]
+        u1 mprv;  // [17]
+        u2 xs;  // [16:15]
+        u2 fs;  // [14:13]
+        u2 mpp;  // [12:11] machine previous privilege
+        u2 xxxx;  // [10:9]
+        u1 spp;  // [8] supervisor previous privilege
+        u1 mpie;  // [7] machine previous interrupt enable
+        u1 xxxxx;  // [6]
+        u1 spie;  // [5] supervisor previous interrupt enable
+        u1 upie;  // [4] user previous interrupt enable
+        u1 mie;  // [3] machine interrupt enable
+        u1 xxxxxx;  // [2]
+        u1 sie;  // [1] supervisor interrupt enable
+        u1 uie;  // [0] user interrupt enable
+    } mstatus_t;
 
     typedef struct packed {
-        u4  mode;  // [63:60]
-        u16 asid;  // [59:44]
-        u44 ppn;   //  [43:0]
+        u4  mode;  // [63:60] (0:bare 8:Sv39 9:Sv48)
+        u16 asid;  // [59:44] address space identifier
+        u44 ppn;   //  [43:0] physical page number
     } satp_t;
+
+    parameter logic [3:0] SATP_bare = 4'b0000;
+    parameter logic [3:0] SATP_sv39 = 4'b1000;
+    parameter logic [3:0] SATP_sv48 = 4'b1001;
 
     typedef struct packed {
         u10 reserved;  // [63:54]
-        u44 ppn;       // [53:10]
-        u2  RSW;       // [9:8]
-        u1  D;         // [7]
-        u1  A;         // [6]
-        u1  G;         // [5]
-        u1  U;         // [4]
-        u1  X;         // [3]
-        u1  W;         // [2]
-        u1  R;         // [1]
-        u1  V;         // [0]
+        u44 ppn;       // [53:10] physical page number
+        u2  rsw;       // [9:8] reserved for supervisor software
+        u1  d;         // [7] dirty
+        u1  a;         // [6] accessed
+        u1  g;         // [5] global
+        u1  u;         // [4] user
+        u1  x;         // [3] executable
+        u1  w;         // [2] writable
+        u1  r;         // [1] readable
+        u1  v;         // [0] valid
     } Sv39_entry_t;
 
-
+    parameter logic [1:0] U_Mode = 2'b00;
+    parameter logic [1:0] S_Mode = 2'b01;
+    parameter logic [1:0] M_Mode = 2'b11;
 endpackage
 `endif

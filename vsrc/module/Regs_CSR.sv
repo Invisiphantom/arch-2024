@@ -6,14 +6,14 @@
 module Regs_CSR
     import common::*;
 (
-    input                clk,           // 时钟信号
-    input                reset,         // 复位信号
-    input         [11:0] rw_CSR,        // 需要读写的寄存器
-    output reg    [63:0] readData_CSR  // 读取得到的数据
+    input             clk,          // 时钟信号
+    input             reset,        // 复位信号
+    input      [11:0] rw_CSR,       // 需要读写的寄存器
+    output reg [63:0] readData_CSR  // 读取得到的数据
 );
 
     reg [1:0] mode;
-    reg [63:0] mstatus;
+    mstatus_t mstatus;
     reg [63:0] mie;
     reg [63:0] mtvec;
     reg [63:0] mscratch;

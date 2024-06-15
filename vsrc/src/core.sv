@@ -11,6 +11,7 @@
 `include "module/ALU.sv"
 `include "module/BranchJudge.sv"
 `include "module/DataMem.sv"
+`include "module/DataMMU.sv"
 `include "module/RegWrite.sv"
 `endif
 
@@ -32,6 +33,9 @@ module core
     reg A0_clk;
     assign A0_clk = clk;
 
+    wire pipline_busy;
+    assign pipline_busy = (|A2_EXE_instruction) | (|A3_MEM_instruction) | (|A4_WB_instruction);
+
     reg [63:0] A1_IF_PCaddress;
     always @(posedge clk) begin
         if (reset) begin  // 复位赋值PCINIT
@@ -43,17 +47,62 @@ module core
             else if (IF_jumpReg) A1_IF_PCaddress <= IF_readData1_R + IF_imm;
             else if (EXE_cnd) A1_IF_PCaddress <= EXE_PCaddress + EXE_imm;
             // 关闭流水线并行
-            else if ((|A2_EXE_instruction) | (|A3_MEM_instruction) | (|A4_WB_instruction)) A1_IF_PCaddress <= A1_IF_PCaddress;
+            else if (pipline_busy) A1_IF_PCaddress <= A1_IF_PCaddress;
             else if (iresp.data_ok) A1_IF_PCaddress <= A1_IF_PCaddress + 4;
         end
     end
 
-    assign ireq.valid = 1'b1;
-    assign ireq.addr  = A1_IF_PCaddress;
+    // assign ireq.valid = 1'b1;
+    // assign ireq.addr  = A1_IF_PCaddress;  // TODO
+
+
+
+    reg  IF_PC_mmu_run;
+    wire IF_PC_mmu_wait;
+    wire IF_PC_mmu_ok;
+    assign IF_PC_mmu_wait = IF_PC_mmu_run & ~IF_PC_mmu_ok;  // 异步拉低
+    DataMMU u_PC_DataMMU (
+        .clk     (clk),
+        .reset   (reset),
+        .mode    (u_Regs_CSR.mode),
+        .virAddr (A1_IF_PCaddress),
+        .satp    (u_Regs_CSR.satp),
+        .mmu_wait(IF_PC_mmu_wait),
+        .mmu_ok  (IF_PC_mmu_ok),
+        .phyAddr (ireq.addr),
+        .dreq    (dreq),
+        .dresp   (dresp)
+    );
+
+    reg [63:0] IF_temp_PCaddress;
+    always @(posedge clk) begin
+        if (reset) begin
+            IF_temp_PCaddress = 64'b0;
+            IF_PC_mmu_run = 1'b0;
+            ireq.valid = 1'b1;
+        end else begin
+            if (iresp.data_ok) begin  // PC地址发送改变
+                ireq.valid = 1'b0;  // 关闭ibus
+                IF_PC_mmu_run = 1'b1;  // 开始地址转换
+                IF_temp_PCaddress = A1_IF_PCaddress;
+            end else if (IF_PC_mmu_ok == 1'b1) begin
+                ireq.valid = 1'b1;  // 开启ibus
+                IF_PC_mmu_run = 1'b0;  // 结束地址转换
+            end
+        end
+    end
+
+
+
+
+
+
+
+
 
     wire [31:0] A1_IF_instruction;
     // assign A1_IF_instruction = (MEM_wait | EXE_wait | ~iresp.data_ok) ? 32'b0 : iresp.data;  // 取得指令
-    assign A1_IF_instruction = (MEM_wait | EXE_wait | ~iresp.data_ok | (|A2_EXE_instruction) | (|A3_MEM_instruction) | (|A4_WB_instruction)) ? 32'b0 : iresp.data;  // 关闭流水线并行
+    assign A1_IF_instruction = (MEM_wait | EXE_wait | ~iresp.data_ok | pipline_busy) ? 32'b0 : iresp.data;  // 关闭流水线并行
 
 
 
@@ -120,6 +169,58 @@ module core
         .instruction(A1_IF_instruction),
         .imm        (IF_imm)
     );
+
+
+
+    reg  [63:0] temp;
+    wire [ 4:0] IF_writeCSR_zimm;
+    assign IF_writeCSR_zimm = A1_IF_instruction[19:15];
+    always @(posedge clk) begin
+        if (reset) begin  // 复位赋值mode为3
+            u_Regs_CSR.mode = 2'b11;
+            u_Regs_CSR.mstatus = 64'b0;
+            u_Regs_CSR.mie = 64'b0;
+            u_Regs_CSR.mtvec = 64'b0;
+            u_Regs_CSR.mscratch = 64'b0;
+            u_Regs_CSR.mepc = 64'b0;
+            u_Regs_CSR.mcause = 64'b0;
+            u_Regs_CSR.mtval = 64'b0;
+            u_Regs_CSR.mip = 64'b0;
+        end else if (IF_csrrx) begin  // 在EXE阶段的上升沿触发
+            case (A1_IF_instruction[14:12])
+                3'b001:  temp = IF_readData1_R;  // csrrw
+                3'b010:  temp = IF_readData_CSR | IF_readData1_R;  // csrrs
+                3'b011:  temp = IF_readData_CSR & ~IF_readData1_R;  // csrrc
+                3'b101:  temp = {59'b0, IF_writeCSR_zimm};  // csrrwi
+                3'b110:  temp = IF_readData_CSR | {59'b0, IF_writeCSR_zimm};  // csrrsi
+                3'b111:  temp = IF_readData_CSR & ~{59'b0, IF_writeCSR_zimm};  // csrrci
+                default: temp = 64'h0;
+            endcase
+            case (A1_IF_instruction[31:20])
+                12'h180: u_Regs_CSR.satp = temp;
+                12'h300: u_Regs_CSR.mstatus = temp;
+                12'h304: u_Regs_CSR.mie = temp;
+                12'h305: u_Regs_CSR.mtvec = temp;
+                12'h340: u_Regs_CSR.mscratch = temp;
+                12'h341: u_Regs_CSR.mepc = temp;
+                12'h342: u_Regs_CSR.mcause = temp;
+                12'h343: u_Regs_CSR.mtval = temp;
+                12'h344: u_Regs_CSR.mip = temp;
+
+                12'b0000_0000_0000: begin  // ecall
+
+                end
+                12'b0011_0000_0010: begin  // mret
+                    u_Regs_CSR.mstatus.mie = u_Regs_CSR.mstatus.mpie;
+                    u_Regs_CSR.mstatus.mpie = 1'b1;
+                    u_Regs_CSR.mode = u_Regs_CSR.mstatus.mpp;
+                    u_Regs_CSR.mstatus.mpp = U_Mode;
+                end
+                default: ;
+            endcase
+        end
+    end
+
 
 
 
@@ -357,54 +458,7 @@ module core
     end
 
 
-    reg  [63:0] temp;
-    wire [ 4:0] MEM_writeCSR_zimm;
-    assign MEM_writeCSR_zimm = A3_MEM_instruction[19:15];
-    always @(posedge clk) begin
-        if (reset) begin  // 复位赋值mode为3
-            u_Regs_CSR.mode = 2'b11;
-            u_Regs_CSR.mstatus = 64'b0;
-            u_Regs_CSR.mie = 64'b0;
-            u_Regs_CSR.mtvec = 64'b0;
-            u_Regs_CSR.mscratch = 64'b0;
-            u_Regs_CSR.mepc = 64'b0;
-            u_Regs_CSR.mcause = 64'b0;
-            u_Regs_CSR.mtval = 64'b0;
-            u_Regs_CSR.mip = 64'b0;
-        end else if (MEM_csrrx) begin
-            case (A3_MEM_instruction[14:12])
-                3'b001:  temp = MEM_readData1_R;  // csrrw
-                3'b010:  temp = MEM_readData_CSR | MEM_readData1_R;  // csrrs
-                3'b011:  temp = MEM_readData_CSR & ~MEM_readData1_R;  // csrrc
-                3'b101:  temp = {59'b0, MEM_writeCSR_zimm};  // csrrwi
-                3'b110:  temp = MEM_readData_CSR | {59'b0, MEM_writeCSR_zimm};  // csrrsi
-                3'b111:  temp = MEM_readData_CSR & ~{59'b0, MEM_writeCSR_zimm};  // csrrci
-                default: temp = 64'h0;
-            endcase
 
-            case (A3_MEM_instruction[31:20])
-                12'h180: u_Regs_CSR.satp = temp;
-                12'h300: u_Regs_CSR.mstatus = temp;
-                12'h304: u_Regs_CSR.mie = temp;
-                12'h305: u_Regs_CSR.mtvec = temp;
-                12'h340: u_Regs_CSR.mscratch = temp;
-                12'h341: u_Regs_CSR.mepc = temp;
-                12'h342: u_Regs_CSR.mcause = temp;
-                12'h343: u_Regs_CSR.mtval = temp;
-                12'h344: u_Regs_CSR.mip = temp;
-
-                12'b0000_0000_0000: begin  // ecall
-
-                end
-
-                12'b0011_0000_0010: begin  // mret
-
-                end
-
-                default: ;
-            endcase
-        end
-    end
 
 
 

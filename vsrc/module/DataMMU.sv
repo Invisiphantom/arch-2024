@@ -9,9 +9,9 @@ module DataMMU
     input       reset,  // 复位信号
     input [1:0] mode,   // 当前特权级
 
-    input        [38:0] virAddr,  // 虚拟地址(Sv39)
+    input        [63:0] virAddr,  // 虚拟地址(Sv39)
     input satp_t        satp,     // satp寄存器
-    input               memMMU,   // 是否需要地址转换
+    input               mmu_wait, // 是否需要地址转换
 
     output reg                mmu_ok,
     output reg         [63:0] phyAddr,
@@ -26,15 +26,27 @@ module DataMMU
     assign L0_offset  = virAddr[20:12];  // 9bit
     assign Phy_offset = virAddr[11:0];  // 12bit
 
+    reg bubble;
     reg [1:0] state;
     Sv39_entry_t L2_entry, L1_entry, L0_entry;
 
     always @(posedge clk) begin
         if (reset) begin
-            state  = 2'b00;
-            mmu_ok = 1'b0;
-        end else begin
-            if (memMMU) begin
+            bubble  = 1'b0;
+            state   = 2'b00;
+            mmu_ok  = 1'b0;
+            phyAddr = 64'b0;
+        end else if (mmu_ok) mmu_ok = 1'b0;
+        else if (mmu_wait) begin
+
+            if (mode == M_Mode || satp.mode == SATP_bare) begin
+                if (bubble == 1'b0) bubble = 1'b1;
+                else begin
+                    bubble  = 1'b0;
+                    mmu_ok  = 1'b1;
+                    phyAddr = virAddr;
+                end
+            end else
                 case (state)
                     2'b00: begin  // L2_cache
                         if (~dresp.data_ok) begin
@@ -46,9 +58,9 @@ module DataMMU
                             dreq.valid = 1'b0;
                             L2_entry   = dresp.data;
                             if (L2_entry[3:1] == 3'b000) state = 2'b01;
-                            else begin
-                                mmu_ok = 1'b1;
-                                state  = 2'b00;
+                            else begin  // 找到叶结点
+                                mmu_ok  = 1'b1;
+                                state   = 2'b00;  // 重置状态机
                                 phyAddr = {8'b0, L2_entry.ppn, Phy_offset};
                             end
                         end
@@ -64,9 +76,9 @@ module DataMMU
                             dreq.valid = 1'b0;
                             L1_entry   = dresp.data;
                             if (L1_entry[3:1] == 3'b000) state = 2'b10;
-                            else begin
-                                mmu_ok = 1'b1;
-                                state  = 2'b00;
+                            else begin  // 找到叶结点
+                                mmu_ok  = 1'b1;
+                                state   = 2'b00;  // 重置状态机
                                 phyAddr = {8'b0, L1_entry.ppn, Phy_offset};
                             end
                         end
@@ -86,11 +98,8 @@ module DataMMU
                             phyAddr = {8'b0, L0_entry.ppn, Phy_offset};
                         end
                     end
-
                     default: ;
                 endcase
-            end
         end
     end
-
 endmodule
