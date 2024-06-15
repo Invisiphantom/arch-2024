@@ -32,6 +32,9 @@ module core
     wire A0_clk;
     assign A0_clk = clk;
 
+    wire pipeline_parallel;
+    assign pipeline_parallel = (|A2_EXE_instruction) | (|A3_MEM_instruction) | (|A4_WB_instruction);
+
 
     reg [63:0] A1_IF_PCaddress;
     always @(posedge clk) begin
@@ -44,6 +47,8 @@ module core
             else if (IF_jump) A1_IF_PCaddress <= A1_IF_PCaddress + IF_imm;
             else if (IF_jumpReg) A1_IF_PCaddress <= IF_readData1_R + IF_imm;
             else if (EXE_cnd) A1_IF_PCaddress <= EXE_PCaddress + EXE_imm;
+            // 取消流水线并行
+            else if (pipeline_parallel) A1_IF_PCaddress <= A1_IF_PCaddress;
             else if (iresp.data_ok) A1_IF_PCaddress <= A1_IF_PCaddress + 4;
         end
     end
@@ -52,12 +57,10 @@ module core
     wire [63:0] A1_IF_PCaddress_;
     assign A1_IF_PCaddress_ = ireq.addr;
 
-
     reg  IF_PC_mmu_run;
     wire IF_PC_mmu_wait;
     wire IF_PC_mmu_ok;
     assign IF_PC_mmu_wait = IF_PC_mmu_run & ~IF_PC_mmu_ok;  // 异步拉低
-
 
 
 
@@ -78,7 +81,8 @@ module core
 
 
     wire [31:0] A1_IF_instruction;
-    assign A1_IF_instruction = (MEM_wait | EXE_wait | ~iresp.data_ok) ? 32'b0 : iresp.data;  // 取得指令
+    // assign A1_IF_instruction = (MEM_wait | EXE_wait | ~iresp.data_ok) ? 32'b0 : iresp.data;  // 取得指令
+    assign A1_IF_instruction = (MEM_wait | EXE_wait | ~iresp.data_ok | pipeline_parallel) ? 32'b0 : iresp.data;  // 取得指令
 
 
     wire [1:0] IF_aluOp_2;

@@ -94,8 +94,8 @@ module DataMem
 
 
     reg bubble;
-    reg [1:0] state; // 三级MMU状态机
-    wire [11:0] Phy_offset; // 物理地址偏移
+    reg [1:0] state;  // 三级MMU状态机
+    wire [11:0] Phy_offset;  // 物理地址偏移
     wire [8:0] L2_offset, L1_offset, L0_offset;
     Sv39_entry_t L2_entry, L1_entry, L0_entry;
     assign L2_offset  = virAddr[38:30];  // 9bit
@@ -113,73 +113,7 @@ module DataMem
             L1_entry = 64'b0;
             L0_entry = 64'b0;
         end else if (mmu_ok) mmu_ok = 1'b0;
-        else if (mmu_wait) begin
-            if (mode == M_Mode || satp.mode == SATP_bare) begin
-                if (bubble == 1'b0) bubble = 1'b1;  // 延迟一个周期
-                else begin
-                    bubble  = 1'b0;
-                    mmu_ok  = 1'b1;
-                    phyAddr = virAddr;
-                end
-            end else
-                case (state)
-                    2'b00: begin  // L2_cache
-                        if (~dresp.data_ok) begin
-                            dreq.valid  = 1'b1;
-                            dreq.strobe = 8'b0;
-                            dreq.size   = MSIZE8;
-                            dreq.addr   = {8'b0, satp.ppn, L2_offset, 3'b0};
-                        end else begin
-                            dreq.valid = 1'b0;
-                            L2_entry   = dresp.data;
-                            if (L2_entry[3:1] == 3'b000) state = 2'b01;
-                            else begin  // 找到叶结点
-                                mmu_ok  = 1'b1;
-                                state   = 2'b00;  // 重置状态机
-                                phyAddr = {8'b0, L2_entry.ppn, Phy_offset};
-                            end
-                        end
-                    end
-
-                    2'b01: begin  // L1_cache
-                        if (~dresp.data_ok) begin
-                            dreq.valid  = 1'b1;
-                            dreq.strobe = 8'b0;
-                            dreq.size   = MSIZE8;
-                            dreq.addr   = {8'b0, L2_entry.ppn, L1_offset, 3'b0};
-                        end else begin
-                            dreq.valid = 1'b0;
-                            L1_entry   = dresp.data;
-                            if (L1_entry[3:1] == 3'b000) state = 2'b10;
-                            else begin  // 找到叶结点
-                                mmu_ok  = 1'b1;
-                                state   = 2'b00;  // 重置状态机
-                                phyAddr = {8'b0, L1_entry.ppn, Phy_offset};
-                            end
-                        end
-                    end
-
-                    2'b10: begin  // L0_cache
-                        if (~dresp.data_ok) begin
-                            dreq.valid  = 1'b1;
-                            dreq.strobe = 8'b0;
-                            dreq.size   = MSIZE8;
-                            dreq.addr   = {8'b0, L1_entry.ppn, L0_offset, 3'b0};
-                        end else begin
-                            dreq.valid = 1'b0;
-                            L0_entry = dresp.data;
-                            mmu_ok = 1'b1;
-                            state = 2'b00;
-                            phyAddr = {8'b0, L0_entry.ppn, Phy_offset};
-                        end
-                    end
-                    default: ;
-                endcase
-
-
-
-
-        end else if (memRead) begin  // 如果需要读内存
+        else if (memRead) begin  // 如果需要读内存
             if (~dresp.data_ok) begin  // 发起读请求
                 dreq.valid  = 1'b1;  // 读使能
                 dreq.addr   = memAddr;  // 内存地址
@@ -267,6 +201,72 @@ module DataMem
                     default: ;
                 endcase
             end else dreq.valid = 1'b0;  // 写完成, 关闭写使能
+
+
+
+
+        end else if (mmu_wait) begin
+            if (mode == M_Mode || satp.mode == SATP_bare) begin
+                if (bubble == 1'b0) bubble = 1'b1;  // 延迟一个周期
+                else begin
+                    bubble  = 1'b0;
+                    mmu_ok  = 1'b1;
+                    phyAddr = virAddr;
+                end
+            end else
+                case (state)
+                    2'b00: begin  // L2_cache
+                        if (~dresp.data_ok) begin
+                            dreq.valid  = 1'b1;
+                            dreq.strobe = 8'b0;
+                            dreq.size   = MSIZE8;
+                            dreq.addr   = {8'b0, satp.ppn, L2_offset, 3'b0};
+                        end else begin
+                            dreq.valid = 1'b0;
+                            L2_entry   = dresp.data;
+                            if (L2_entry[3:1] == 3'b000) state = 2'b01;
+                            else begin  // 找到叶结点
+                                mmu_ok  = 1'b1;
+                                state   = 2'b00;  // 重置状态机
+                                phyAddr = {8'b0, L2_entry.ppn, Phy_offset};
+                            end
+                        end
+                    end
+
+                    2'b01: begin  // L1_cache
+                        if (~dresp.data_ok) begin
+                            dreq.valid  = 1'b1;
+                            dreq.strobe = 8'b0;
+                            dreq.size   = MSIZE8;
+                            dreq.addr   = {8'b0, L2_entry.ppn, L1_offset, 3'b0};
+                        end else begin
+                            dreq.valid = 1'b0;
+                            L1_entry   = dresp.data;
+                            if (L1_entry[3:1] == 3'b000) state = 2'b10;
+                            else begin  // 找到叶结点
+                                mmu_ok  = 1'b1;
+                                state   = 2'b00;  // 重置状态机
+                                phyAddr = {8'b0, L1_entry.ppn, Phy_offset};
+                            end
+                        end
+                    end
+
+                    2'b10: begin  // L0_cache
+                        if (~dresp.data_ok) begin
+                            dreq.valid  = 1'b1;
+                            dreq.strobe = 8'b0;
+                            dreq.size   = MSIZE8;
+                            dreq.addr   = {8'b0, L1_entry.ppn, L0_offset, 3'b0};
+                        end else begin
+                            dreq.valid = 1'b0;
+                            L0_entry = dresp.data;
+                            mmu_ok = 1'b1;
+                            state = 2'b00;
+                            phyAddr = {8'b0, L0_entry.ppn, Phy_offset};
+                        end
+                    end
+                    default: ;
+                endcase
         end
     end
 endmodule

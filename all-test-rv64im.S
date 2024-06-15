@@ -21408,7 +21408,9 @@ Disassembly of section .data:
    14e74:	406007b7          	lui	a5,0x40600
    14e78:	00300713          	li	a4,3
    14e7c:	00e78623          	sb	a4,12(a5) # 0x4060000c
+
    14e80:	00008067          	ret
+   
    14e84:	ff010113          	addi	sp,sp,-16
    14e88:	00813023          	sd	s0,0(sp)
    14e8c:	00113423          	sd	ra,8(sp)
