@@ -59,7 +59,7 @@ module core
 
     wire [1:0] IF_aluOp_2;
     wire IF_regWrite, IF_aluSrc, IF_aluSext, IF_memRead, IF_memWrite;
-    wire IF_branch, IF_jump, IF_jumpReg, IF_lui, IF_auipc, IF_excep;
+    wire IF_branch, IF_jump, IF_jumpReg, IF_lui, IF_auipc, IF_csrrx;
     Control u_Control (
         .Opcode_7(A1_IF_instruction[6:0]),
         .regWrite(IF_regWrite),
@@ -73,7 +73,7 @@ module core
         .jumpReg (IF_jumpReg),
         .lui     (IF_lui),
         .auipc   (IF_auipc),
-        .excep   (IF_excep)
+        .csrrx   (IF_csrrx)
     );
 
 
@@ -104,16 +104,11 @@ module core
     wire [63:0] IF_readData_CSR;  // 数据CSRs[csr]
     csrs_t csrGroup;  // 外接寄存器组用于commit
     Regs_CSR u_Regs_CSR (
-        .clk   (clk),
-        .reset (reset),
-        .excep (IF_excep),
-        .funct3(A1_IF_instruction[14:12]),
-        .rw_CSR(A1_IF_instruction[31:20]),
-
-        .writeCSR_rs1 (IF_readData1_R),
-        .writeCSR_zimm(A1_IF_instruction[19:15]),
-        .readData_CSR (IF_readData_CSR),
-        .csrGroup     (csrGroup)
+        .clk         (clk),
+        .reset       (reset),
+        .rw_CSR      (A1_IF_instruction[31:20]),
+        .readData_CSR(IF_readData_CSR),
+        .csrGroup    (csrGroup)
     );
 
 
@@ -130,51 +125,51 @@ module core
     reg [63:0] EXE_PCaddress;
     reg [31:0] A2_EXE_instruction;
     reg EXE_regWrite, EXE_aluSrc, EXE_aluSext, EXE_memRead, EXE_memWrite;
-    reg EXE_branch, EXE_jump, EXE_jumpReg, EXE_lui, EXE_auipc, EXE_excep;
+    reg EXE_branch, EXE_jump, EXE_jumpReg, EXE_lui, EXE_auipc, EXE_csrrx;
     reg [ 4:0] EXE_aluControl_5;
-    reg [63:0] EXE_readData1_R_old;
+    reg [63:0] EXE_readData1_R;
     reg [63:0] EXE_readData2_R;
     reg [63:0] EXE_readData_CSR;
     reg [63:0] EXE_imm;
     always @(posedge clk) begin
         if (reset) begin
-            EXE_PCaddress       <= 64'b0;
-            A2_EXE_instruction  <= 32'b0;
-            EXE_regWrite        <= 1'b0;
-            EXE_aluSrc          <= 1'b0;
-            EXE_aluSext         <= 1'b0;
-            EXE_memRead         <= 1'b0;
-            EXE_memWrite        <= 1'b0;
-            EXE_branch          <= 1'b0;
-            EXE_jump            <= 1'b0;
-            EXE_jumpReg         <= 1'b0;
-            EXE_lui             <= 1'b0;
-            EXE_auipc           <= 1'b0;
-            EXE_excep           <= 1'b0;
-            EXE_aluControl_5    <= 5'b0;
-            EXE_readData1_R_old <= 64'b0;
-            EXE_readData2_R     <= 64'b0;
-            EXE_readData_CSR    <= 64'b0;
-            EXE_imm             <= 64'b0;
+            EXE_PCaddress      <= 64'b0;
+            A2_EXE_instruction <= 32'b0;
+            EXE_regWrite       <= 1'b0;
+            EXE_aluSrc         <= 1'b0;
+            EXE_aluSext        <= 1'b0;
+            EXE_memRead        <= 1'b0;
+            EXE_memWrite       <= 1'b0;
+            EXE_branch         <= 1'b0;
+            EXE_jump           <= 1'b0;
+            EXE_jumpReg        <= 1'b0;
+            EXE_lui            <= 1'b0;
+            EXE_auipc          <= 1'b0;
+            EXE_csrrx          <= 1'b0;
+            EXE_aluControl_5   <= 5'b0;
+            EXE_readData1_R    <= 64'b0;
+            EXE_readData2_R    <= 64'b0;
+            EXE_readData_CSR   <= 64'b0;
+            EXE_imm            <= 64'b0;
         end else if (~(MEM_wait | EXE_wait)) begin
-            EXE_PCaddress       <= A1_IF_PCaddress;
-            A2_EXE_instruction  <= A1_IF_instruction;
-            EXE_regWrite        <= IF_regWrite;
-            EXE_aluSrc          <= IF_aluSrc;
-            EXE_aluSext         <= IF_aluSext;
-            EXE_memRead         <= IF_memRead;
-            EXE_memWrite        <= IF_memWrite;
-            EXE_branch          <= IF_branch;
-            EXE_jump            <= IF_jump;
-            EXE_jumpReg         <= IF_jumpReg;
-            EXE_lui             <= IF_lui;
-            EXE_auipc           <= IF_auipc;
-            EXE_excep           <= IF_excep;
-            EXE_aluControl_5    <= IF_aluControl_5;
-            EXE_readData1_R_old <= IF_readData1_R;
-            EXE_readData2_R     <= IF_readData2_R;
-            EXE_readData_CSR    <= IF_readData_CSR;
-            EXE_imm             <= IF_imm;
+            EXE_PCaddress      <= A1_IF_PCaddress;
+            A2_EXE_instruction <= A1_IF_instruction;
+            EXE_regWrite       <= IF_regWrite;
+            EXE_aluSrc         <= IF_aluSrc;
+            EXE_aluSext        <= IF_aluSext;
+            EXE_memRead        <= IF_memRead;
+            EXE_memWrite       <= IF_memWrite;
+            EXE_branch         <= IF_branch;
+            EXE_jump           <= IF_jump;
+            EXE_jumpReg        <= IF_jumpReg;
+            EXE_lui            <= IF_lui;
+            EXE_auipc          <= IF_auipc;
+            EXE_csrrx          <= IF_csrrx;
+            EXE_aluControl_5   <= IF_aluControl_5;
+            EXE_readData1_R    <= IF_readData1_R;
+            EXE_readData2_R    <= IF_readData2_R;
+            EXE_readData_CSR   <= IF_readData_CSR;
+            EXE_imm            <= IF_imm;
         end
     end
 
@@ -206,7 +201,7 @@ module core
         if (EXE_lui == 1'b1) aluA = 64'b0;  // lui [rd=0+imm]
         else if (EXE_auipc == 1'b1) aluA = EXE_PCaddress;  // auipc [rd=PC+imm]
         else begin  // rs1
-            aluA = EXE_readData1_R_old;
+            aluA = EXE_readData1_R;
             if (WB_regWrite & (EXE_rs1 != 5'b0) & (EXE_rs1 == WB_rd)) aluA = WB_writeData_R;
             if (MEM_regWrite & (EXE_rs1 != 5'b0) & (EXE_rs1 == MEM_rd))
                 if (~MEM_memRead)  // 非load指令
@@ -260,7 +255,8 @@ module core
     // EXE_MEM
     reg [63:0] MEM_PCaddress;
     reg [31:0] A3_MEM_instruction;
-    reg MEM_regWrite, MEM_memRead, MEM_memWrite, MEM_jump, MEM_jumpReg, MEM_excep;
+    reg MEM_regWrite, MEM_memRead, MEM_memWrite, MEM_jump, MEM_jumpReg, MEM_csrrx;
+    reg [63:0] MEM_readData1_R;
     reg [63:0] MEM_readData2_R;
     reg [63:0] MEM_readData_CSR;
     reg [63:0] MEM_aluResult;
@@ -273,7 +269,8 @@ module core
             MEM_memWrite       <= 1'b0;
             MEM_jump           <= 1'b0;
             MEM_jumpReg        <= 1'b0;
-            MEM_excep          <= 1'b0;
+            MEM_csrrx          <= 1'b0;
+            MEM_readData1_R    <= 64'b0;
             MEM_readData2_R    <= 64'b0;
             MEM_readData_CSR   <= 64'b0;
             MEM_aluResult      <= 64'b0;
@@ -285,8 +282,9 @@ module core
             MEM_memWrite <= EXE_memWrite;
             MEM_jump <= EXE_jump;
             MEM_jumpReg <= EXE_jumpReg;
-            MEM_excep <= EXE_excep;
+            MEM_csrrx <= EXE_csrrx;
             // 处理WB-MEM数据冒险
+            MEM_readData1_R <= EXE_readData1_R;
             if (EXE_memWrite && WB_regWrite && A4_WB_instruction[11:7] == A2_EXE_instruction[24:20] && A4_WB_instruction[11:7] != 5'b0) MEM_readData2_R <= WB_writeData_R;
             else MEM_readData2_R <= EXE_readData2_R;
             MEM_readData_CSR <= EXE_readData_CSR;
@@ -340,7 +338,7 @@ module core
         .memRead     (MEM_memRead),
         .jump        (MEM_jump),
         .jumpReg     (MEM_jumpReg),
-        .excep       (MEM_excep),
+        .csrrx       (MEM_csrrx),
         .aluResult   (MEM_aluResult),
         .readData_M  (MEM_readData_M),
         .PCaddress   (MEM_PCaddress),
@@ -356,6 +354,59 @@ module core
             u_Regs.Register[MEM_rd] = MEM_writeData_R;
         end else u_Regs.Register[0] = 64'h0;
     end
+
+
+    reg  [63:0] temp;
+    wire [ 4:0] MEM_writeCSR_zimm;
+    assign MEM_writeCSR_zimm = A3_MEM_instruction[19:15];
+    always @(posedge clk) begin
+        if (reset) begin  // 复位赋值mode为3
+            u_Regs_CSR.mode = 2'b11;
+            u_Regs_CSR.mstatus = 64'b0;
+            u_Regs_CSR.mie = 64'b0;
+            u_Regs_CSR.mtvec = 64'b0;
+            u_Regs_CSR.mscratch = 64'b0;
+            u_Regs_CSR.mepc = 64'b0;
+            u_Regs_CSR.mcause = 64'b0;
+            u_Regs_CSR.mtval = 64'b0;
+            u_Regs_CSR.mip = 64'b0;
+        end else if (MEM_csrrx) begin
+            case (A3_MEM_instruction[14:12])
+                3'b001:  temp = MEM_readData1_R;  // csrrw
+                3'b010:  temp = MEM_readData_CSR | MEM_readData1_R;  // csrrs
+                3'b011:  temp = MEM_readData_CSR & ~MEM_readData1_R;  // csrrc
+                3'b101:  temp = {59'b0, MEM_writeCSR_zimm};  // csrrwi
+                3'b110:  temp = MEM_readData_CSR | {59'b0, MEM_writeCSR_zimm};  // csrrsi
+                3'b111:  temp = MEM_readData_CSR & ~{59'b0, MEM_writeCSR_zimm};  // csrrci
+                default: temp = 64'h0;
+            endcase
+
+            case (A3_MEM_instruction[31:20])
+                12'h300: u_Regs_CSR.mstatus = temp;
+                12'h304: u_Regs_CSR.mie = temp;
+                12'h305: u_Regs_CSR.mtvec = temp;
+                12'h340: u_Regs_CSR.mscratch = temp;
+                12'h341: u_Regs_CSR.mepc = temp;
+                12'h342: u_Regs_CSR.mcause = temp;
+                12'h343: u_Regs_CSR.mtval = temp;
+                12'h344: u_Regs_CSR.mip = temp;
+
+                12'b0000_0000_0000: begin  // ecall
+
+                end
+
+                12'b0011_0000_0010: begin  // mret
+
+                end
+
+                default: ;
+            endcase
+        end
+    end
+
+
+
+
 
 
     // MEM_WB
@@ -476,6 +527,10 @@ module core
         .mideleg       (0),
         .medeleg       (0)
     );
+
+
+
+
 `endif
 endmodule
 `endif

@@ -11,11 +11,11 @@ module Control (
     output       jumpReg,   // jalr
     output       lui,       // lui
     output       auipc,     // auipc
-    output       excep      // excep
+    output       csrrx      // csrrx
 );
 
     reg [12:0] controlSignal;
-    assign {{regWrite}, {aluSrc, aluOp_2[1:0], aluSext}, memRead, memWrite, branch, jump, jumpReg, lui, auipc, excep} = controlSignal[12:0];
+    assign {{regWrite}, {aluSrc, aluOp_2[1:0], aluSext}, memRead, memWrite, branch, jump, jumpReg, lui, auipc, csrrx} = controlSignal[12:0];
     always @(*) begin
         case (Opcode_7)
             7'b0110011: controlSignal = 13'b1_0100_00000000;  // R-type
@@ -31,7 +31,7 @@ module Control (
             7'b1100111: controlSignal = 13'b1_1000_00001000;  // jalr
             7'b0110111: controlSignal = 13'b1_1000_00000100;  // lui
             7'b0010111: controlSignal = 13'b1_1000_00000010;  // auipc
-            7'b1110011: controlSignal = 13'b1_0000_00000001;  // excep
+            7'b1110011: controlSignal = 13'b1_0000_00000001;  // csrrx
             default: begin
                 controlSignal = 13'b0;
             end
