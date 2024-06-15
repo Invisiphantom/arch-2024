@@ -30,7 +30,7 @@ module core
     input  logic       exint
 );
 
-    reg A0_clk;
+    wire A0_clk;
     assign A0_clk = clk;
 
 

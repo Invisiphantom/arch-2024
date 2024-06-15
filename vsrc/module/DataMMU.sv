@@ -36,6 +36,9 @@ module DataMMU
             state   = 2'b00;
             mmu_ok  = 1'b0;
             phyAddr = 64'b0;
+            L2_entry = 64'b0;
+            L1_entry = 64'b0;
+            L0_entry = 64'b0;
         end else if (mmu_ok) mmu_ok = 1'b0;
         else if (mmu_wait) begin
 
