@@ -1,6 +1,6 @@
 # Arch-2024-Spring-Fudan
 
-> 2024 Spring Computer Organization and Architecture(H) Course Code Repository.
+原仓库: https://gitlab.com/fudan-systa/arch-2024
 
 Arch-2024-Sping-FDU  
 │── build：仿真测试时才会生成的目录  
