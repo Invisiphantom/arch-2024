@@ -15,3 +15,25 @@ Arch-2024-Sping-FDU
 │　　└── SimTop.sv  
 │── Makefile：仿真测试的命令汇总  
 └── README.md: 此文件  
+
+
+## 环境配置
+
+https://github.com/chipsalliance/verible
+
+```bash
+git clone https://github.com/verilator/verilator.git
+cd verilator && git checkout v4.210
+sudo apt install -y perl make autoconf g++ flex bison ccache gtkwave libsdl2-dev zip
+autoupdate
+autoconf
+./configure
+make -j12
+sudo make install
+verilator --version
+
+sudo apt install universal-ctags
+wget https://github.com/chipsalliance/verible/releases/download/v0.0-3671-gf2731544/verible-v0.0-3671-gf2731544-linux-static-x86_64.tar.gz
+tar -xvf  verible-v0.0-3671-gf2731544-linux-static-x86_64.tar.gz
+sudo mv verible-v0.0-3644-g6882622d /usr/local/verible
+```
